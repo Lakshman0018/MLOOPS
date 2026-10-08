@@ -16,6 +16,7 @@ class TestMLPipeline(unittest.TestCase):
 
     def test_dataset_loaded(self):
         self.assertTrue(os.path.exists(DATASET_PATH))
+        self.assertTrue(os.path.exists("student_results.csv"))
 
         data = pd.read_csv(DATASET_PATH)
         self.assertGreater(len(data), 0)
