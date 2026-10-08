@@ -49,8 +49,8 @@ jobs:
         with:
           name: student-result-ml-artifacts
           path: |
-            Project 4/wine_quality_model_missing.pkl
-            Project 4/metrics_missing.json
-            Project 4/student_results_missing.csv
+            Project 4/wine_quality_model.pkl
+            Project 4/metrics.json
+            Project 4/student_results.csv
           if-no-files-found: error
           retention-days: 7
