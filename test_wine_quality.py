@@ -20,7 +20,7 @@ class TestWineQuality(unittest.TestCase):
     def test_model_accuracy(self):
         accuracy = evaluate_model()
 
-        self.assertGreaterEqual(accuracy, 0.50)
+        self.assertGreaterEqual(accuracy, 0.99)
         self.assertLessEqual(accuracy, 1.0)
 
 
