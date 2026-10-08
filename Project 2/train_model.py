@@ -1,55 +1,40 @@
 import json
+from pathlib import Path
+
 import joblib
-import numpy as np
 import pandas as pd
 
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
 
-def create_dataset():
-    rng = np.random.default_rng(42)
-    number_of_students = 300
+DATASET_PATH = Path(__file__).resolve().parents[1] / "Project 1" / "WineQT.csv"
+MODEL_PATH = Path(__file__).resolve().parent / "wine_quality_model.pkl"
+METRICS_PATH = Path(__file__).resolve().parent / "metrics.json"
 
-    data = pd.DataFrame({
-        "attendance": rng.integers(50, 101, number_of_students),
-        "internal_marks": rng.integers(20, 101, number_of_students),
-        "assignment_marks": rng.integers(30, 101, number_of_students),
-        "previous_score": rng.integers(30, 101, number_of_students)
-    })
 
-    data["weighted_score"] = (
-        0.25 * data["attendance"]
-        + 0.35 * data["internal_marks"]
-        + 0.20 * data["assignment_marks"]
-        + 0.20 * data["previous_score"]
-    )
+def load_data():
+    print("Loading WineQT.csv...")
+    data = pd.read_csv(DATASET_PATH)
 
-    # 1 = PASS, 0 = FAIL
-    data["result"] = (data["weighted_score"] >= 60).astype(int)
-    return data
+    required_columns = {"quality", "Id"}
+    missing_columns = required_columns - set(data.columns)
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
+
+    X = data.drop(columns=["quality", "Id"])
+    y = data["quality"]
+
+    print("Dataset loaded successfully.")
+    print("Number of records:", len(data))
+    print("Number of features:", len(X.columns))
+
+    return X, y
 
 
 def train_model():
-    print("Creating dataset...")
-    data = create_dataset()
-    data.to_csv("student_results.csv", index=False)
-
-    print("Dataset created successfully.")
-    print("Number of records:", len(data))
-
-    features = [
-        "attendance",
-        "internal_marks",
-        "assignment_marks",
-        "previous_score"
-    ]
-
-    X = data[features]
-    y = data["result"]
+    X, y = load_data()
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -62,12 +47,12 @@ def train_model():
     print("Training records:", len(X_train))
     print("Testing records :", len(X_test))
 
-    model = Pipeline([
-        ("scaler", StandardScaler()),
-        ("classifier", LogisticRegression(max_iter=1000, random_state=42))
-    ])
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42
+    )
 
-    print("Training model...")
+    print("Training Wine Quality model...")
     model.fit(X_train, y_train)
 
     predictions = model.predict(X_test)
@@ -80,16 +65,17 @@ def train_model():
     print("\nConfusion Matrix:")
     print(matrix)
 
-    joblib.dump(model, "student_result_model.pkl")
-    print("\nModel saved as student_result_model.pkl")
+    joblib.dump(model, MODEL_PATH)
+    print("\nModel saved as wine_quality_model.pkl")
 
     metrics = {
         "accuracy": float(accuracy),
-        "training_records": len(X_train),
-        "testing_records": len(X_test)
+        "training_records": int(len(X_train)),
+        "testing_records": int(len(X_test)),
+        "classes": [int(value) for value in model.classes_]
     }
 
-    with open("metrics.json", "w") as file:
+    with open(METRICS_PATH, "w") as file:
         json.dump(metrics, file, indent=4)
 
     print("Metrics saved as metrics.json")
