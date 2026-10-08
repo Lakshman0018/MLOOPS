@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 DATASET_PATH = Path(__file__).resolve().parent / "WineQT.csv"
 MODEL_PATH = Path(__file__).resolve().parent / "wine_quality_model.pkl"
 METRICS_PATH = Path(__file__).resolve().parent / "metrics.json"
+DATA_OUTPUT_PATH = Path(__file__).resolve().parent / "student_results.csv"
 
 
 def load_data():
@@ -25,6 +26,8 @@ def load_data():
     X = data.drop(columns=["quality", "Id"])
     y = data["quality"]
 
+    data.to_csv(DATA_OUTPUT_PATH, index=False)
+    print("Dataset copy saved as student_results.csv.")
     print("Dataset loaded successfully.")
     print("Number of records:", len(data))
     print("Number of features:", len(X.columns))
