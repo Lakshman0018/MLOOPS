@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 
 
-DATASET_PATH = Path(__file__).resolve().parents[1] / "Project 1" / "WineQT.csv"
+DATASET_PATH = Path(__file__).resolve().parent / "WineQT.csv"
 MODEL_PATH = Path(__file__).resolve().parent / "wine_quality_model.pkl"
 METRICS_PATH = Path(__file__).resolve().parent / "metrics.json"
 
