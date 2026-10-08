@@ -1,4 +1,4 @@
-name: Student Result ML CI
+name: Wine Quality ML CI
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
         run: pip install -r requirements.txt
         working-directory: Project 2
 
-      - name: Train student result model
+      - name: Train Wine Quality model
         run: python train_model.py
         working-directory: Project 2
 
