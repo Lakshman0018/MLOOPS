@@ -16,12 +16,12 @@ Practical 9 adapts the manual GHCR process from Project 8 into GitHub Actions au
 10. Remove the test container even after failure.
 11. Authenticate to GHCR using the automatically generated GITHUB_TOKEN.
 12. Tag the tested image as latest and sha-<full-commit-sha>.
-13. Push both tested tags to the existing GHCR package.
+13. Push both tested tags to the repository-scoped GHCR package.
 
 ## GHCR
 
 Registry: ghcr.io
-Package: ghcr.io/lakshman0018/wine-quality-ml
+Package: ghcr.io/lakshman0018/mloops-wine-quality-ml
 
 The workflow does not use the personal access token from Project 8. It uses GITHUB_TOKEN with contents: read and packages: write.
 
