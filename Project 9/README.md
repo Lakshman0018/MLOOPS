@@ -38,3 +38,7 @@ A failed Docker build, container startup, /health check, or prediction check sto
 ## Security
 
 No personal access token is stored in the repository. Do not add tokens, kubeconfig files, passwords, or other credentials to the workflow or project files.
+
+## CI/CD Repeatability Update
+
+A second documented update was prepared to verify that a later push to main automatically rebuilds, tests, and republishes the Wine Quality image through GitHub Actions.
