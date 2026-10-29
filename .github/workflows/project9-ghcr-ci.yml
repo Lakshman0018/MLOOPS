@@ -11,7 +11,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: wine-quality-ml
+  IMAGE_NAME: ${{ github.event.repository.name }}-wine-quality-ml
 
 jobs:
   build-test-publish:
