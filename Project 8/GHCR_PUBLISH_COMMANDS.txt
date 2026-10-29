@@ -1,0 +1,47 @@
+Project 8 - GHCR Publishing Commands
+
+# Existing tested image
+docker images
+
+# Login to GHCR
+# Use a Personal Access Token through --password-stdin.
+# Never store the real token in this file or in the repository.
+
+# Tag the tested image
+docker tag wine-quality-ml:1.0 ghcr.io/lakshman0018/wine-quality-ml:v1
+docker tag wine-quality-ml:1.0 ghcr.io/lakshman0018/wine-quality-ml:latest
+
+# Push versioned and latest tags
+docker push ghcr.io/lakshman0018/wine-quality-ml:v1
+docker push ghcr.io/lakshman0018/wine-quality-ml:latest
+
+# Pull the published versioned image
+docker pull ghcr.io/lakshman0018/wine-quality-ml:v1
+
+# Run the image pulled from GHCR
+docker run -d --name wine-quality-from-ghcr -p 5000:5000 ghcr.io/lakshman0018/wine-quality-ml:v1
+
+# Verify application
+curl.exe http://localhost:5000/
+
+# PowerShell prediction check
+$body = @{
+    "fixed acidity" = 7.9
+    "volatile acidity" = 0.35
+    "citric acid" = 0.46
+    "residual sugar" = 3.6
+    "chlorides" = 0.078
+    "free sulfur dioxide" = 15
+    "total sulfur dioxide" = 37
+    "density" = 0.9973
+    "pH" = 3.35
+    "sulphates" = 0.86
+    "alcohol" = 12.8
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:5000/predict" -Method Post -ContentType "application/json" -Body $body
+
+# Cleanup
+docker stop wine-quality-from-ghcr
+docker rm wine-quality-from-ghcr
+docker logout ghcr.io
