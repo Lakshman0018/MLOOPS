@@ -30,3 +30,9 @@ The separate Project 11 GitHub Actions workflow trains the model, runs tests, bu
 
 Package:
 ghcr.io/lakshman0018/wine-quality-ml:latest
+
+## GitHub Actions workflow
+
+Workflow file: `.github/workflows/project11-ci.yml`
+
+The workflow trains and quality-checks the model, runs application and logging tests, builds the Docker image, verifies health/prediction/error logging, uploads logging evidence, and publishes the tested image to GHCR.

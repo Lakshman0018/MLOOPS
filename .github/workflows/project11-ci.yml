@@ -1,0 +1,148 @@
+name: Project 11 - Wine Quality Logging CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Project 11/**"
+      - ".github/workflows/project11-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Project 11/**"
+      - ".github/workflows/project11-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: wine-quality-ml
+
+jobs:
+  logging-build-test-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: Project 11
+
+      - name: Train Wine Quality model
+        run: python train_model.py
+        working-directory: Project 11
+
+      - name: Check ML quality gate
+        run: python quality_gate.py
+        working-directory: Project 11
+
+      - name: Run ML pipeline tests
+        run: python -m unittest test_ml_pipeline.py -v
+        working-directory: Project 11
+
+      - name: Run logging application tests
+        run: python -m unittest test_app.py -v
+        working-directory: Project 11
+
+      - name: Build Project 11 Docker image
+        run: docker build -t wine-quality-ml:project11 .
+        working-directory: Project 11
+
+      - name: Start test container
+        run: |
+          docker run -d             --name wine-quality-project11             -p 5000:5000             wine-quality-ml:project11
+
+      - name: Wait for API health
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:5000/health; then
+              echo "Health check passed."
+              exit 0
+            fi
+            echo "Waiting for API... attempt $attempt"
+            sleep 3
+          done
+          echo "Health check failed."
+          docker logs wine-quality-project11
+          exit 1
+
+      - name: Test valid prediction and request ID
+        run: |
+          response=$(curl --fail --silent --show-error             -X POST             -H "Content-Type: application/json"             -H "X-Request-ID: ci-valid-001"             -d '{"fixed acidity":7.9,"volatile acidity":0.35,"citric acid":0.46,"residual sugar":3.6,"chlorides":0.078,"free sulfur dioxide":15,"total sulfur dioxide":37,"density":0.9973,"pH":3.35,"sulphates":0.86,"alcohol":12.8}'             http://127.0.0.1:5000/predict)
+          echo "Prediction response: $response"
+          echo "$response" | grep -q '"prediction"'
+
+      - name: Test validation error tracking
+        run: |
+          status=$(curl --silent --output /tmp/invalid.json --write-out "%{http_code}"             -X POST             -H "Content-Type: application/json"             -H "X-Request-ID: ci-invalid-001"             -d '{"fixed acidity":7.9}'             http://127.0.0.1:5000/predict)
+          echo "Validation status: $status"
+          cat /tmp/invalid.json
+          test "$status" = "400"
+
+      - name: Test 404 tracking
+        run: |
+          status=$(curl --silent --output /tmp/not-found.json --write-out "%{http_code}"             -H "X-Request-ID: ci-404-001"             http://127.0.0.1:5000/not-a-real-route)
+          echo "404 status: $status"
+          cat /tmp/not-found.json
+          test "$status" = "404"
+
+      - name: Verify logging events
+        run: |
+          docker logs wine-quality-project11 2>&1 | tee /tmp/wine-quality-logs.txt
+          grep -q "event=model_loaded" /tmp/wine-quality-logs.txt
+          grep -q "event=prediction_success" /tmp/wine-quality-logs.txt
+          grep -q "event=validation_error" /tmp/wine-quality-logs.txt
+          grep -q "status=404" /tmp/wine-quality-logs.txt
+          grep -q "request_id=ci-valid-001" /tmp/wine-quality-logs.txt
+
+      - name: Upload logging evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project11-logging-evidence
+          path: /tmp/wine-quality-logs.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Show Docker logs
+        if: always()
+        run: docker logs wine-quality-project11 || true
+
+      - name: Remove test container
+        if: always()
+        run: docker rm -f wine-quality-project11 || true
+
+      - name: Create lowercase GHCR image name
+        run: |
+          IMAGE_ID="${REGISTRY}/${{ github.repository_owner }}/${IMAGE_NAME}"
+          IMAGE_ID=$(echo "$IMAGE_ID" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_ID=$IMAGE_ID" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" |             docker login "$REGISTRY"             -u "${{ github.actor }}"             --password-stdin
+
+      - name: Tag tested Project 11 image
+        run: |
+          docker tag wine-quality-ml:project11 "$IMAGE_ID:latest"
+          docker tag wine-quality-ml:project11 "$IMAGE_ID:project11-${{ github.sha }}"
+
+      - name: Push tested Project 11 image to GHCR
+        run: |
+          docker push "$IMAGE_ID:latest"
+          docker push "$IMAGE_ID:project11-${{ github.sha }}"
