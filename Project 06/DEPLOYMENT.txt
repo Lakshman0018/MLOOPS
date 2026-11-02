@@ -1,0 +1,5 @@
+Wine Quality Prediction ML Application
+Run: python app.py
+Health endpoint: GET /
+Prediction endpoint: POST /predict
+Port: 5000

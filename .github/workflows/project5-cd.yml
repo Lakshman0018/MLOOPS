@@ -30,23 +30,23 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-        working-directory: Project 5
+        working-directory: Project 05
 
       - name: Train Wine Quality model
         run: python train_model.py
-        working-directory: Project 5
+        working-directory: Project 05
 
       - name: Check ML quality gate
         run: python quality_gate.py
-        working-directory: Project 5
+        working-directory: Project 05
 
       - name: Run automated ML tests
         run: python -m unittest test_ml_pipeline.py -v
-        working-directory: Project 5
+        working-directory: Project 05
 
       - name: Run prediction application tests
         run: python -m unittest test_app.py -v
-        working-directory: Project 5
+        working-directory: Project 05
 
       - name: Prepare release candidate
         run: |
@@ -56,12 +56,12 @@ jobs:
           cp metrics.json release_candidate/
           cp requirements.txt release_candidate/
           printf "Wine Quality Prediction ML Application\nRun: python app.py\nEndpoint: POST /predict\n" > release_candidate/DEPLOYMENT.txt
-        working-directory: Project 5
+        working-directory: Project 05
 
       - name: Upload release candidate
         uses: actions/upload-artifact@v4
         with:
           name: wine-quality-ml-release
-          path: Project 5/release_candidate/
+          path: Project 05/release_candidate/
           if-no-files-found: error
           retention-days: 7

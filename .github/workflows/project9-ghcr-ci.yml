@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "Project 9/**"
+      - "Project 09/**"
   workflow_dispatch:
 
 permissions:
@@ -29,22 +29,22 @@ jobs:
         run: python -m pip install --upgrade pip
       - name: Install dependencies
         run: pip install -r requirements.txt
-        working-directory: Project 9
+        working-directory: Project 09
       - name: Train Wine Quality model
         run: python train_model.py
-        working-directory: Project 9
+        working-directory: Project 09
       - name: Check ML quality gate
         run: python quality_gate.py
-        working-directory: Project 9
+        working-directory: Project 09
       - name: Run ML pipeline tests
         run: python -m unittest test_ml_pipeline.py -v
-        working-directory: Project 9
+        working-directory: Project 09
       - name: Run application tests
         run: python -m unittest test_app.py -v
-        working-directory: Project 9
+        working-directory: Project 09
       - name: Build Docker image
         run: docker build -t wine-quality-ml:ci .
-        working-directory: Project 9
+        working-directory: Project 09
       - name: Start test container
         run: |
           docker run -d \

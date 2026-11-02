@@ -30,27 +30,27 @@ jobs:
 
       - name: Install ML dependencies
         run: pip install -r requirements.txt
-        working-directory: Project 4
+        working-directory: Project 04
 
       - name: Train Wine Quality model
         run: python train_model.py
-        working-directory: Project 4
+        working-directory: Project 04
 
       - name: Check ML quality gate
         run: python quality_gate.py
-        working-directory: Project 4
+        working-directory: Project 04
 
       - name: Run automated ML tests
         run: python -m unittest discover -v
-        working-directory: Project 4
+        working-directory: Project 04
 
       - name: Upload validated ML artifacts
         uses: actions/upload-artifact@v7
         with:
           name: student-result-ml-artifacts
           path: |
-            Project 4/wine_quality_model.pkl
-            Project 4/metrics.json
-            Project 4/student_results.csv
+            Project 04/wine_quality_model.pkl
+            Project 04/metrics.json
+            Project 04/student_results.csv
           if-no-files-found: error
           retention-days: 7
