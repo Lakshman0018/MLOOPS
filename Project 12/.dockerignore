@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.git/
+.github/
+tests/
+README.md
+prometheus.yml
+wine_quality_alerts.yml
