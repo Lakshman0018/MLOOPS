@@ -1,0 +1,21 @@
+Project 10 Deployment Record
+
+Platform: Render
+Workspace: MLOOPS
+Service: wine-quality-ml
+Image: ghcr.io/lakshman0018/wine-quality-ml:latest
+Plan: Free
+Port: 5000
+Health check: /health
+Public URL: https://wine-quality-ml-w8uk.onrender.com
+
+Observed verification:
+- Root endpoint: HTTP 200, service status ok
+- Prediction endpoint: HTTP 200
+- Prediction result: 8
+- Render deployment status: Live
+
+Security:
+- GHCR package is private.
+- Registry authentication is stored as a Render credential.
+- Personal access tokens are not stored in the repository.
