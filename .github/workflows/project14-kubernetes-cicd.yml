@@ -105,13 +105,14 @@ jobs:
           docker push "${REGISTRY}/${IMAGE_NAME}:latest"
 
       - name: Save tested image for self-hosted deployment
-        run: docker save -o wine-quality-ml.tar "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+        run: docker save "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}" | gzip -1 > wine-quality-ml.tar.gz
 
       - name: Upload tested image artifact
         uses: actions/upload-artifact@v4
         with:
           name: wine-quality-ml-image
-          path: wine-quality-ml.tar
+          path: wine-quality-ml.tar.gz
+          compression-level: 0
           retention-days: 1
 
   deploy-kubernetes:
@@ -138,7 +139,7 @@ jobs:
 
       - name: Load tested image into Docker
         shell: powershell
-        run: docker load -i wine-quality-ml.tar
+        run: docker load -i wine-quality-ml.tar.gz
 
       - name: Load tested image into Minikube
         shell: powershell
