@@ -107,6 +107,9 @@ jobs:
   deploy-kubernetes:
     needs: build-test-push
     runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Verify Minikube access
@@ -120,7 +123,7 @@ jobs:
       - name: Log in to GHCR
         shell: powershell
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $env:GH_TOKEN | docker login ghcr.io -u $env:GITHUB_ACTOR --password-stdin
 
