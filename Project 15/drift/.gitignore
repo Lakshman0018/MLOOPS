@@ -1,0 +1,7 @@
+﻿reference_data.csv
+current_data.csv
+current_labeled_data.csv
+drift_report.json
+retraining_metrics.json
+wine_quality_model_candidate.pkl
+wine_quality_model_approved.pkl
