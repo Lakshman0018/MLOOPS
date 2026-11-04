@@ -138,7 +138,15 @@ jobs:
 
       - name: Load tested image into Docker
         shell: powershell
-        run: docker load -i wine-quality-ml.tar
+        env:
+          IMAGE_REF: ${{ needs.build-test-push.outputs.image_ref }}
+        run: |
+          docker load -i wine-quality-ml.tar
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Artifact load failed; falling back to pulling tested image from GHCR."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login "$env:REGISTRY" -u "${{ github.actor }}" --password-stdin
+            docker pull $env:IMAGE_REF
+          }
 
       - name: Load tested image into Minikube
         shell: powershell
