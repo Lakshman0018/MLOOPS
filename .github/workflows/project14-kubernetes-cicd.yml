@@ -1,0 +1,161 @@
+name: Project 14 - Wine Quality Kubernetes CI/CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "Project 12/**"
+      - "Project 14/**"
+      - ".github/workflows/project14-kubernetes-cicd.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lakshman0018/wine-quality-ml
+  PROJECT_DIR: "Project 12"
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_ref: ${{ steps.image.outputs.image_ref }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Train Wine Quality model
+        run: python train_model.py
+        working-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Check ML quality gate
+        run: python quality_gate.py
+        working-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Run ML tests
+        run: python -m unittest test_ml_pipeline.py -v
+        working-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Run application and monitoring tests
+        run: python -m unittest test_app.py -v
+        working-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Create immutable image reference
+        id: image
+        run: echo "image_ref=${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Docker image
+        run: docker build -t wine-quality-ml:project14 .
+        working-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Start test container
+        run: docker run -d --name wine-quality-project14-test -p 5000:5000 wine-quality-ml:project14
+
+      - name: Verify container health and metrics
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:5000/health; then
+              curl --fail --silent http://127.0.0.1:5000/metrics | grep -q "wine_quality_api_model_loaded"
+              exit 0
+            fi
+            sleep 3
+          done
+          docker logs wine-quality-project14-test
+          exit 1
+
+      - name: Verify prediction
+        run: |
+          response=$(curl --fail --silent --show-error -X POST -H "Content-Type: application/json" -d "{\"fixed acidity\":7.9,\"volatile acidity\":0.35,\"citric acid\":0.46,\"residual sugar\":3.6,\"chlorides\":0.078,\"free sulfur dioxide\":15,\"total sulfur dioxide\":37,\"density\":0.9973,\"pH\":3.35,\"sulphates\":0.86,\"alcohol\":12.8}" http://127.0.0.1:5000/predict)
+          echo "Prediction response: $response"
+          echo "$response" | grep -q '"prediction"'
+
+      - name: Remove test container
+        if: always()
+        run: docker rm -f wine-quality-project14-test || true
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+
+      - name: Tag tested image
+        run: |
+          IMAGE_REF="${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+          docker tag wine-quality-ml:project14 "$IMAGE_REF"
+          docker tag wine-quality-ml:project14 "${REGISTRY}/${IMAGE_NAME}:latest"
+
+      - name: Push tested images to GHCR
+        run: |
+          docker push "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+          docker push "${REGISTRY}/${IMAGE_NAME}:latest"
+
+  deploy-kubernetes:
+    needs: build-test-push
+    runs-on: self-hosted
+
+    steps:
+      - name: Verify Minikube access
+        shell: powershell
+        run: |
+          minikube status
+          kubectl config current-context
+          kubectl get nodes
+          kubectl get deployment wine-quality-prediction
+
+      - name: Pull tested image
+        shell: powershell
+        env:
+          IMAGE_REF: ${{ needs.build-test-push.outputs.image_ref }}
+        run: docker pull $env:IMAGE_REF
+
+      - name: Load tested image into Minikube
+        shell: powershell
+        env:
+          IMAGE_REF: ${{ needs.build-test-push.outputs.image_ref }}
+        run: minikube image load $env:IMAGE_REF
+
+      - name: Show current deployment image
+        shell: powershell
+        run: kubectl get deployment wine-quality-prediction -o jsonpath="{.spec.template.spec.containers[0].image}"
+
+      - name: Deploy immutable image
+        shell: powershell
+        env:
+          IMAGE_REF: ${{ needs.build-test-push.outputs.image_ref }}
+        run: kubectl set image deployment/wine-quality-prediction wine-quality-api=$env:IMAGE_REF
+
+      - name: Wait for Kubernetes rollout
+        shell: powershell
+        run: kubectl rollout status deployment/wine-quality-prediction --timeout=180s
+
+      - name: Verify application through Kubernetes Service
+        shell: powershell
+        run: kubectl exec deployment/wine-quality-prediction -- python -c "import urllib.request; print(urllib.request.urlopen('http://wine-quality-prediction-service/health', timeout=10).read().decode())"
+
+      - name: Show deployed image and Pods
+        shell: powershell
+        run: |
+          kubectl get deployment wine-quality-prediction -o wide
+          kubectl get pods -o wide
+          kubectl rollout history deployment/wine-quality-prediction
+
+      - name: Roll back when deployment verification fails
+        if: failure()
+        shell: powershell
+        run: |
+          kubectl rollout undo deployment/wine-quality-prediction
+          kubectl rollout status deployment/wine-quality-prediction --timeout=180s
