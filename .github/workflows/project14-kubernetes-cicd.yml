@@ -104,6 +104,16 @@ jobs:
           docker push "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
           docker push "${REGISTRY}/${IMAGE_NAME}:latest"
 
+      - name: Save tested image for self-hosted deployment
+        run: docker save -o wine-quality-ml.tar "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+
+      - name: Upload tested image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-quality-ml-image
+          path: wine-quality-ml.tar
+          retention-days: 1
+
   deploy-kubernetes:
     needs: build-test-push
     runs-on: self-hosted
@@ -120,18 +130,15 @@ jobs:
           kubectl get nodes
           kubectl get deployment wine-quality-prediction
 
-      - name: Log in to GHCR
-        shell: powershell
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $env:GH_TOKEN | docker login ghcr.io -u $env:GITHUB_ACTOR --password-stdin
+      - name: Download tested image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wine-quality-ml-image
+          path: .
 
-      - name: Pull tested image
+      - name: Load tested image into Docker
         shell: powershell
-        env:
-          IMAGE_REF: ${{ needs.build-test-push.outputs.image_ref }}
-        run: docker pull $env:IMAGE_REF
+        run: docker load -i wine-quality-ml.tar
 
       - name: Load tested image into Minikube
         shell: powershell
